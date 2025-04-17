@@ -3,7 +3,7 @@ pipeline {
 
   environment {
     AWS_REGION = 'us-east-1'
-    ECR_URL = '971422685558.dkr.ecr.us-east-1.amazonaws.com/frontend-demo' // ECR repo name
+    ECR_REPO = '971422685558.dkr.ecr.us-east-1.amazonaws.com/frontend-demo' // Your ECR repo
     SSH_KEY = credentials('ec2_id')
     EC2_HOST = '18.212.172.14'
   }
@@ -11,16 +11,17 @@ pipeline {
   stages {
     stage('Checkout') {
       steps {
-        checkout scm  
+        checkout scm
       }
     }
 
     stage('Build Docker Image') {
       steps {
         script {
-          def imageName = "frontend-demo"  // Static name for the repo
-          env.IMAGE_NAME = imageName
-          sh "docker build -t ${imageName}:latest ."
+          COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+          IMAGE_TAG = "${COMMIT_HASH}"
+          env.IMAGE_TAG = IMAGE_TAG
+          sh "docker build -t ${ECR_REPO}:${IMAGE_TAG} ."
         }
       }
     }
@@ -29,9 +30,8 @@ pipeline {
       steps {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
           sh """
-            aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_URL}
-            docker tag ${IMAGE_NAME}:latest ${ECR_URL}:latest  // Corrected tag format
-            docker push ${ECR_URL}:latest  // Push to the correct repo
+            aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPO}
+            docker push ${ECR_REPO}:${IMAGE_TAG}
           """
         }
       }
@@ -43,14 +43,15 @@ pipeline {
       }
       steps {
         sh """
-          ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${EC2_HOST} << 'EOF'
-            aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_URL}
-            docker pull ${ECR_URL}:latest  // Pull the correct image tag
+          ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${EC2_HOST} << EOF
+            aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPO}
+            docker pull ${ECR_REPO}:${IMAGE_TAG}
 
-            docker stop ${IMAGE_NAME} || true
+            docker stop frontend-demo || true
+            docker rm frontend-demo || true
             sleep 5
 
-            docker run -d --name ${IMAGE_NAME} -p 3000:3000 ${ECR_URL}:latest  // Run container
+            docker run -d --name frontend-demo -p 3000:3000 ${ECR_REPO}:${IMAGE_TAG}
 
             docker image prune -af
           EOF

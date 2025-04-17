@@ -9,6 +9,7 @@ pipeline {
   }
 
   stages {
+
     stage('Checkout') {
       steps {
         checkout scm
@@ -38,9 +39,9 @@ pipeline {
     stage('Build Docker Image') {
       steps {
         script {
-          COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
-          env.IMAGE_TAG = COMMIT_HASH
-          sh "docker build -t ${ECR_REPO}:${IMAGE_TAG} ."
+          def commitHash = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+          env.IMAGE_TAG = commitHash
+          sh "docker build -t ${ECR_REPO}:${env.IMAGE_TAG} ."
         }
       }
     }
@@ -61,20 +62,22 @@ pipeline {
         expression { env.BRANCH_NAME == 'main' }
       }
       steps {
-        sh """
-          ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${EC2_HOST} << EOF
-            aws ecr get-login-password --region ${AWS_REGION} | sudo docker login --username AWS --password-stdin ${ECR_REPO}
-            sudo docker pull ${ECR_REPO}:${IMAGE_TAG}
+        script {
+          sh """
+            ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${EC2_HOST} << "ENDSSH"
+              aws ecr get-login-password --region ${AWS_REGION} | sudo docker login --username AWS --password-stdin ${ECR_REPO}
+              sudo docker pull ${ECR_REPO}:${IMAGE_TAG}
 
-            sudo docker stop frontend-demo || true
-            sudo docker rm frontend-demo || true
-            sleep 5
+              sudo docker stop frontend-demo || true
+              sudo docker rm frontend-demo || true
+              sleep 5
 
-            sudo docker run -d --name frontend-demo -p 3000:3000 ${ECR_REPO}:${IMAGE_TAG}
+              sudo docker run -d --name frontend-demo -p 3000:3000 ${ECR_REPO}:${IMAGE_TAG}
 
-            sudo docker image prune -af
-          EOF
-        """
+              sudo docker image prune -af
+            ENDSSH
+          """
+        }
       }
     }
   }

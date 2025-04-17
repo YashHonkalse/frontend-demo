@@ -9,7 +9,6 @@ pipeline {
   }
 
   stages {
-
     stage('Checkout') {
       steps {
         checkout scm
@@ -64,7 +63,7 @@ pipeline {
       steps {
         script {
           sh """
-            ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${EC2_HOST} << "ENDSSH"
+            ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ubuntu@${EC2_HOST} <<EOF
               aws ecr get-login-password --region ${AWS_REGION} | sudo docker login --username AWS --password-stdin ${ECR_REPO}
               sudo docker pull ${ECR_REPO}:${IMAGE_TAG}
 
@@ -75,7 +74,7 @@ pipeline {
               sudo docker run -d --name frontend-demo -p 3000:3000 ${ECR_REPO}:${IMAGE_TAG}
 
               sudo docker image prune -af
-            ENDSSH
+            EOF
           """
         }
       }

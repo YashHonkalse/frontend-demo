@@ -3,7 +3,7 @@ pipeline {
 
   environment {
     AWS_REGION = 'us-east-1'
-    ECR_REPO = '971422685558.dkr.ecr.us-east-1.amazonaws.com/frontend-demo' // Your ECR repo
+    ECR_REPO = '971422685558.dkr.ecr.us-east-1.amazonaws.com/frontend-demo'
     SSH_KEY = credentials('ec2_id')
     EC2_HOST = '18.212.172.14'
   }
@@ -15,12 +15,31 @@ pipeline {
       }
     }
 
+    stage('Get Branch Name') {
+      steps {
+        script {
+          def branchName = sh(
+            script: '''
+              git branch --remote --contains HEAD | grep -Eo 'origin/[^ ]+' | head -1 | sed 's|origin/||'
+            ''',
+            returnStdout: true
+          ).trim()
+
+          if (!branchName) {
+            branchName = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+          }
+
+          env.BRANCH_NAME = branchName
+          echo "Branch: ${env.BRANCH_NAME}"
+        }
+      }
+    }
+
     stage('Build Docker Image') {
       steps {
         script {
-          COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
-          IMAGE_TAG = "${COMMIT_HASH}"
-          env.IMAGE_TAG = IMAGE_TAG
+          def commitHash = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+          env.IMAGE_TAG = commitHash
           sh "docker build -t ${ECR_REPO}:${IMAGE_TAG} ."
         }
       }
@@ -39,7 +58,7 @@ pipeline {
 
     stage('Deploy to EC2') {
       when {
-        branch 'main'
+        expression { env.BRANCH_NAME == 'main' }
       }
       steps {
         sh """

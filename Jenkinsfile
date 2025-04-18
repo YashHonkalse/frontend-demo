@@ -40,6 +40,7 @@ pipeline {
         script {
           def commitHash = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
           env.IMAGE_TAG = commitHash
+
           sh """
             docker build -t ${ECR_REPO}:${IMAGE_TAG} .
             docker tag ${ECR_REPO}:${IMAGE_TAG} ${ECR_REPO}:latest
@@ -73,15 +74,28 @@ pipeline {
               echo "[+] Logging into ECR"
               aws ecr get-login-password --region ${AWS_REGION} | sudo docker login --username AWS --password-stdin ${ECR_REPO}
 
-              echo "[+] Stopping and removing old container"
+              echo "[+] Stopping and removing existing container"
               sudo docker stop frontend-demo || true
               sudo docker rm frontend-demo || true
 
-              echo "[+] Pruning old images"
+              echo "[+] Cleaning up old images"
               sudo docker image prune -af || true
 
               echo "[+] Pulling latest image"
               sudo docker pull ${ECR_REPO}:latest
 
               echo "[+] Running container from latest image"
-              sudo docker
+              sudo docker run -d --name frontend-demo -p 3000:3000 ${ECR_REPO}:latest
+            '
+          """
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      cleanWs()
+    }
+  }
+}

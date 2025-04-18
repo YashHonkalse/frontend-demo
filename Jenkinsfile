@@ -5,7 +5,7 @@ pipeline {
     AWS_REGION = 'us-east-1'
     ECR_REPO = '971422685558.dkr.ecr.us-east-1.amazonaws.com/frontend-demo'
     SSH_KEY = credentials('ec2_id')
-    EC2_HOST = '18.212.172.14'
+    EC2_HOST = '3.86.43.156'
   }
 
   stages {
@@ -58,7 +58,7 @@ pipeline {
 
     stage('Deploy to EC2') {
       when {
-        expression { env.BRANCH_NAME == 'main' }
+        expression { env.BRANCH_NAME == 'uat' }
       }
       steps {
         script {

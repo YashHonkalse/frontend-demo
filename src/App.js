@@ -12,7 +12,7 @@ function App() {
 
   const fetchData = async () => {
     try {
-      const response = await axios.get("http://3.84.3.212:3000/user"); // Hardcoded URL
+      const response = await axios.get("http://35.170.182.88:3000/user"); // Hardcoded URL
       console.log(response.data);
       setData(response.data);
     } catch (error) {
@@ -26,7 +26,7 @@ function App() {
 
   const postData = async () => {
     try {
-      const response = await axios.post("http://3.84.3.212:3000/user", { data: inputValue }); // Hardcoded URL
+      const response = await axios.post("http://35.170.182.88:3000/user", { data: inputValue }); // Hardcoded URL
       console.log(response.data);
       fetchData(); // Fetch data again after posting
     } catch (error) {
@@ -36,7 +36,7 @@ function App() {
 
   const dbinit = async () => {
     try {
-      const response = await axios.post("http://3.84.3.212:3000/dbinit"); // Hardcoded URL
+      const response = await axios.post("http://35.170.182.88:3000/dbinit"); // Hardcoded URL
       console.log(response.data);
     } catch (error) {
       console.error(error);
@@ -45,7 +45,7 @@ function App() {
 
   const tbinit = async () => {
     try {
-      const response = await axios.post("http://3.84.3.212:3000/tbinit"); // Hardcoded URL
+      const response = await axios.post("http://35.170.182.88:3000/tbinit"); // Hardcoded URL
       console.log(response.data);
     } catch (error) {
       console.error(error);

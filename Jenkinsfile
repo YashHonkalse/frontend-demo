@@ -58,7 +58,7 @@ pipeline {
 
     stage('Deploy to EC2') {
       when {
-        expression { env.BRANCH_NAME == 'main' }
+        expression { env.BRANCH_NAME == 'uat' }
       }
       steps {
         script {
